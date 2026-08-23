@@ -13,3 +13,11 @@ Este projeto tem a missão de ser o facilitador na tomada de decisão para reduz
 ***src/data.py:*** Coleta os arquivos CSVs e transforma em dataframe
 
 ***util/image:*** Hospeta imagens
+
+## Tecnologias utilizadas
+
+- Python
+- Pandas
+- Matplotlib
+- Streamlit
+- Kaggle
