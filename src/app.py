@@ -4,25 +4,43 @@ from pathlib import Path
 from data import df_country, df_state, df_temp
 from datetime import date
 import pandas as pd
+from matplotlib.pyplot import plot
+import altair as alt
 
 # Configura o layout do streamlit
 st.set_page_config(layout= 'wide')
 
 #=============================== FUNÇÕES
 # Filtra ano do dataframe
-def filtra_dataframe(
-    dataframe_filtro: pd.DataFrame,
-    ano: str,
-    filtro_ano
+# def filtra_dataframe(
+#     dataframe_filtro: pd.DataFrame,
+#     ano: str,
+#     filtro_ano
+# ) -> pd.DataFrame:
+#     df_filtro = dataframe_filtro[
+#         dataframe_filtro[ano].isin(filtro_ano)
+#     ]
+#     return df_filtro
+# ------------------------------------------------
+# Filtra país
+def filtra_dataframe_v2(
+    dataframe_pais: pd.DataFrame,
+    coluna: str,
+    dado_filtrado
 ) -> pd.DataFrame:
-    df_filtro = dataframe_filtro[
-        dataframe_filtro[ano].isin(filtro_ano)
+    df_filtrado = dataframe_pais[
+        dataframe_pais[coluna].isin(dado_filtrado)
     ]
-    return df_filtro
+    return df_filtrado
 # ------------------------------------------------
 # Cria lista de anos
 def lista_ano(dataframe_ano):
     return sorted(dataframe_ano["dt"].apply(lambda data: data.year).unique().tolist())
+# ------------------------------------------------
+# Cria lista
+def lista_opcoes(dataframe_lista: pd.DataFrame,
+                 coluna: str) -> pd.DataFrame:
+    return sorted(dataframe_lista[coluna].unique().tolist())
 # ------------------------------------------------
 # Adiciona coluna ano
 def col_ano(
@@ -92,37 +110,96 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
+#=============================== AJUSTA DATAFRAMES
+# # Cria os dataframes COUNTRY para exibir os dados e gráficos
+# df_country_ano = col_ano(df_country, "dt")
+# lista_ano_df_country = lista_ano(df_country_ano)
+# todos_anos = [" "] + lista_ano_df_country
+
+df_country_graf = df_country[["dt","AverageTemperature", "Country"]]
+lista_opcoes_df_country = lista_opcoes(df_country_graf,"Country")
+# ------------------------------------------------
+
+#=============================== SIDEBAR
+st.sidebar.header("Filtros")
+with st.sidebar:
+    # seleciona_ano_df_country = st.selectbox('Filtro de Ano do dataset GlobalLandTemperaturesByCountry',options=todos_anos)
+    seleciona_pais_df_country = st.multiselect("Por país",options=lista_opcoes_df_country,default=["Brazil"])
+
+#=============================== APLICA OS FILTROS
+df_country_filtrado = df_country[df_country["Country"].isin(seleciona_pais_df_country)]
+df_country_graf_aplic = df_country_graf[df_country_graf["Country"].isin(seleciona_pais_df_country)] 
+
 #=============================== VISUALIZAÇÕES
 # Exibe amostra dos dataframes
-st.subheader('Este painel tem como objetivo monitar o aquecimento global, ajudando na tomada de desição de forma rápida e segura.')
+st.subheader('Este painel tem como objetivo monitar o aquecimento global a partir do ano 2000, ajudando na tomada de desição de forma rápida e segura.')
 st.markdown('Você pode conferir a fonte dos dados [aqui.](https://www.kaggle.com/datasets/sachinsarkar/climate-change-global-temperature-data)')
 st.markdown('Você também pode se aprofundar nos "Objetivos de Desenvolvimento Sustentavel" acessando o [link.](https://conectabrasil.org/home)')
-st.write('Amostra do dataset GlobalLandTemperaturesByCountry')
-st.dataframe(df_country.head(10))
+st.markdown("---")
+# ------------------------------------------------
+st.subheader('Aqui podemos observar a temperatura média por país. ')
+# st.dataframe(df_country.head(10))
+st.text("Temos os dados detalhados:")
+st.dataframe(df_country_filtrado)
+st.text("Podemos ver a média de temperadora por país selecionado")
+line_chart = alt.Chart(df_country_graf_aplic).mark_line(interpolate='basis').encode(
+    alt.X("dt", title='Data'),
+    alt.Y('AverageTemperature', title='Temperatura'),
+    color=alt.Color("Country:N", title="País"),
+            tooltip=[
+            alt.Tooltip("dt:T", title="Data"),
+            alt.Tooltip("AverageTemperature:Q", title="Temperatura"), 
+            alt.Tooltip("Country:N", title="País")
+        ]
+).properties(
+        title=alt.TitleParams(
+            text="Temperatura Média",
+            anchor="middle"
+        )
+)
+st.altair_chart(line_chart) 
+st.markdown("---")
+# ------------------------------------------------
+
 st.write('Amostra do dataset GlobalLandTemperaturesByState')
 st.dataframe(df_state.head(10))
 st.write('Amostra do dataset GlobalLandTemperatures')
 st.dataframe(df_temp.head(10))
 
-#=============================== SIDEBAR
+# #=============================== SIDEBAR
+# df_country_ano = col_ano(df_country, "dt")
+# lista_ano_df_country = lista_ano(df_country_ano)
+# todos_anos = [" "] + lista_ano_df_country
+
+# df_country_graf = df_country_ano[["dt","AverageTemperature", "Country"]]
+# lista_opcoes_df_country = lista_opcoes(df_country_graf,"Country")
+
+# st.sidebar.header("Filtro")
+# with st.sidebar:
+#     # seleciona_ano_df_country = st.selectbox('Filtro de Ano do dataset GlobalLandTemperaturesByCountry',options=todos_anos)
+#     seleciona_pais_df_country = st.multiselect("Filtro país",options=lista_opcoes_df_country,default=["Brazil"])
 
 
-df_country_ano = col_ano(df_country, "dt")
-lista_ano_df_country = lista_ano(df_country_ano)
-todos_anos = [" "] + lista_ano_df_country
+#=============================== EXIBE DADOS FILTRADOS
+# if seleciona_ano_df_country == " ":
+#     df_country_filtrado = df_country_ano
+#     st.text("Selecionado todos os anos.")
+# else:
+#     df_country_filtrado = filtra_dataframe_v2(
+#         df_country_ano,
+#         "ano",
+#         [seleciona_ano_df_country]
+#     )
+#     st.text(f"Selecionado o ano {seleciona_ano_df_country}")
+# st.dataframe(df_country_filtrado)
 
-st.sidebar.header("Filtro")
-with st.sidebar:
-    seleciona_ano_df_country = st.selectbox('Filtro de Ano do dataset GlobalLandTemperaturesByCountry',options=todos_anos)
-
-if seleciona_ano_df_country == " ":
-    df_country_filtrado = df_country_ano
-    st.text("Selecionado todos os anos.")
-else:
-    df_country_filtrado = filtra_dataframe(
-        df_country_ano,
-        "ano",
-        [seleciona_ano_df_country]
-    )
-    st.text(f"Selecionado o ano {seleciona_ano_df_country}")
-st.dataframe(df_country_filtrado)
+# df_country_filtrado = df_country[df_country["Country"].isin(seleciona_pais_df_country)]
+# st.dataframe(df_country_filtrado)
+# # ------------------------------------------------
+# df_country_graf_aplic = df_country_graf[df_country_graf["Country"].isin(seleciona_pais_df_country)]
+# st.line_chart(data=df_country_graf_aplic,
+#               x="dt",
+#               x_label="Data", 
+#               y="AverageTemperature", 
+#               y_label="Média de Temperadtura",
+#               color="Country")

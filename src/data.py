@@ -12,7 +12,7 @@ api.authenticate()
 # Diretório onde o dataset será baixado e descompactado
 dataset_dir = 'data/'
 
-# Diretório para coletar os arquivos 
+# Diretório para coletar os arquivos
 root_dir = Path(__file__).parent.parent
 print(root_dir)
 

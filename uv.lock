@@ -898,6 +898,7 @@ name = "proj-bloco-tp1"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
+    { name = "altair" },
     { name = "beautifulsoup4" },
     { name = "kaggle" },
     { name = "matplotlib" },
@@ -907,6 +908,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "altair", specifier = ">=6.2.2" },
     { name = "beautifulsoup4", specifier = ">=4.15.0" },
     { name = "kaggle", specifier = ">=2.2.4" },
     { name = "matplotlib", specifier = ">=3.11.1" },
