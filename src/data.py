@@ -4,6 +4,9 @@ import pandas as pd
 from kaggle.api.kaggle_api_extended import KaggleApi
 from pathlib import Path
 from datetime import date
+import requests
+from bs4 import BeautifulSoup
+
 
 # Inicia a API
 api = KaggleApi()
@@ -53,7 +56,7 @@ df_state["dt"] = pd.to_datetime(df_state["dt"])
 df_state = df_state[df_state["dt"] >= "2000-01-01"].reset_index(drop=True)
 df_state["dt"] = df_state["dt"].dt.date
 # ----------------------------------------------------
-df_temp = pd.read_csv(
+df_global= pd.read_csv(
     file_path_temp,
         dtype={
         "LandAverageTemperature": float,
@@ -67,6 +70,91 @@ df_temp = pd.read_csv(
     },
     parse_dates=["dt"]    
 )
-df_temp["dt"] = pd.to_datetime(df_temp["dt"])
-df_temp = df_temp[df_temp["dt"] >= "2000-01-01"].reset_index(drop=True)
-df_temp["dt"] = df_temp["dt"].dt.date
+df_global["dt"] = pd.to_datetime(df_global["dt"])
+df_global = df_global[df_global["dt"] >= "2000-01-01"].reset_index(drop=True)
+df_global["dt"] = df_global["dt"].dt.date
+
+#=============================== SCRAP
+
+url = (
+    "https://pt.wikipedia.org/wiki/"
+    "Clima_da_cidade_de_S%C3%A3o_Paulo"
+)
+
+# Cria a identificação do agente
+AGENTE = "INFNET - Proj Bloco (trabalho escolar sobre ODS 13)"
+
+
+# Faz a requisição para a página
+response = requests.get(
+    url,
+    headers={"User-Agent":AGENTE},
+    timeout=30
+)
+
+
+# Converte o HTML para um objeto BeautifulSoup
+soup = BeautifulSoup(response.text, "html.parser")
+
+tabela_clima = None
+
+tabelas = soup.find_all("table")
+
+for tabela in tabelas:
+    texto_tabela = tabela.get_text(
+        separator=" ",
+        strip=True
+    )
+
+    if "Dados climatológicos para São Paulo" in texto_tabela:
+        tabela_clima = tabela
+        break
+
+if tabela_clima is None:
+    raise ValueError("A tabela climatológica não foi encontrada.")
+
+# Localiza todas as linhas da tabela
+linhas = tabela_clima.find_all("tr")
+
+linha_cabecalho = None
+indice_cabecalho = None
+
+# Procura o cabeçalho verdadeiro
+for indice, linha in enumerate(linhas):
+    textos = [
+        celula.get_text(" ", strip=True)
+        for celula in linha.find_all(["th", "td"])
+    ]
+
+    if "Mês" in textos and any("Jan" in texto for texto in textos):
+        linha_cabecalho = linha
+        indice_cabecalho = indice
+        break
+
+if linha_cabecalho is None:
+    raise ValueError("O cabeçalho da tabela não foi encontrado.")
+
+cabecalhos = [
+    celula.get_text(" ", strip=True)
+    for celula in linha_cabecalho.find_all(["th", "td"])
+]
+
+dados = []
+
+# Começa na linha seguinte ao cabeçalho
+for linha in linhas[indice_cabecalho + 1:]:
+    celulas = linha.find_all(["th", "td"])
+
+    valores = [
+        celula.get_text(" ", strip=True)
+        for celula in celulas
+    ]
+
+    # Adiciona somente linhas com a mesma quantidade de colunas
+    if len(valores) == len(cabecalhos):
+        dados.append(valores)
+
+df_clima = pd.DataFrame(
+    dados,
+    columns=cabecalhos
+)
