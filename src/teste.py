@@ -89,3 +89,6 @@ df_clima = pd.DataFrame(
 )
 
 print(df_clima.head())
+
+
+
