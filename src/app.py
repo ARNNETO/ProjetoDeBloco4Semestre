@@ -2,39 +2,21 @@
 import streamlit as st
 from pathlib import Path
 from data import df_country, df_state, df_global, df_clima
-from datetime import date
 import pandas as pd
-from matplotlib.pyplot import plot
 import altair as alt
 
 # Configura o layout do streamlit
 st.set_page_config(layout= 'wide')
 
 #=============================== FUNÇÕES
-# Filtra país
-# def filtra_dataframe_v2(
-#     dataframe_pais: pd.DataFrame,
-#     coluna: str,
-#     dado_filtrado
-# ) -> pd.DataFrame:
-#     df_filtrado = dataframe_pais[
-#         dataframe_pais[coluna].isin(dado_filtrado)
-#     ]
-#     return df_filtrado
-# # ------------------------------------------------
-# Cria lista de anos
-# def lista_ano(dataframe_ano: pd.DataFrame) -> list:
-#     return sorted(dataframe_ano["dt"].
-#                   apply(lambda data: data.year)
-#                   .unique()
-#                   .tolist())
-# ------------------------------------------------
 # Cria lista
+@st.cache_data
 def lista_opcoes(dataframe_lista: pd.DataFrame,
                  coluna: str) -> list:
     return sorted(dataframe_lista[coluna].unique().tolist())
 # ------------------------------------------------
 # Adiciona coluna ano
+@st.cache_data
 def col_ano(
     dataframe_ano: pd.DataFrame,
     coluna_ano: str
@@ -45,6 +27,17 @@ def col_ano(
     )
     return new_dataframe
 
+# ------------------------------------------------
+# Baixa arquivos em csv
+def baixar_arquivo(dataframe: pd.DataFrame, nome_do_arquivo: str):
+    st.download_button(
+        label="Baixar CSV",
+        data=dataframe.to_csv(index=False).encode("utf-8"),
+        file_name=nome_do_arquivo,
+        mime="text/csv",
+        key=f"download_{nome_do_arquivo}"
+    )
+
 #=============================== SESSION STATE
 # Inicia as preferências antes de criar o session state
 if 'cor_fundo' not in st.session_state:
@@ -52,15 +45,6 @@ if 'cor_fundo' not in st.session_state:
 # ------------------------------------------------
 if 'cor_fonte' not in st.session_state:
     st.session_state.cor_fonte = '#000000'
-# ------------------------------------------------
-if 'filtra_ano_country' not in st.session_state:
-    st.session_state.filtra_ano_country = False
-# ------------------------------------------------
-if 'filtra_ano_state' not in st.session_state:
-    st.session_state.filtra_ano_state = None
-# ------------------------------------------------
-if 'filtra_ano_global' not in st.session_state:
-    st.session_state.filtra_ano_global = None
 
 #=============================== CARGA DE IMAGEM
 # Diretório da imagem
@@ -103,13 +87,7 @@ st.markdown(
     unsafe_allow_html=True
 )
 #=============================== LISTA DE FILTROS
-# # Lista de país
-# lista_opcoes_df_country = lista_opcoes(df_country,"Country")
-# # Lista de estados
-# lista_opcoes_df_state = lista_opcoes(df_state,"State")
-# # Cria feature Ano e lista ano
 df_global_ano = col_ano(df_global,"dt")
-# lista_opcoes_ano = lista_opcoes(df_global_ano,"ano")
 
 #=============================== SIDEBAR
 st.sidebar.header("Filtros")
@@ -117,28 +95,30 @@ with st.sidebar:
     # Filtro de paises
     seleciona_pais = st.multiselect(
         "Por país",
-        options=sorted(df_country["Country"].dropna().unique()),
-        default=["Brazil"]
+        options=lista_opcoes(df_country, "Country"),
+        default=["Brazil"],
+        key="seleciona_pais"
     )
 
-    # Estados disponíveis com filtro por país
-    estados_disponiveis = sorted(
-        df_state[
-            df_state["Country"].isin(seleciona_pais)
-        ]["State"].dropna().unique()
-    )
+    df_state_por_pais = df_state[
+    df_state["Country"].isin(seleciona_pais)
+]
+    estados_disponiveis = lista_opcoes(df_state_por_pais, "State")
+    default_estado = ["Distrito Federal"] if "Distrito Federal" in estados_disponiveis else []
 
     seleciona_estado = st.multiselect(
         "Por estado",
         options=estados_disponiveis,
-        default=["Distrito Federal"]
+        default=default_estado,
+        key="seleciona_estado"
     )
 
     # Filtro ano
     seleciona_ano = st.multiselect(
         "Por ano",
-        options=sorted(df_global_ano["ano"].unique()), 
-        default=[2000]
+        options=lista_opcoes(df_global_ano, "ano"), 
+        default=[2000],
+        key="seleciona_ano"
     )
 #=============================== APLICA OS FILTROS
 df_country_filtrado = df_country[
@@ -166,7 +146,7 @@ st.subheader('Temperatura Média Por País',text_alignment="center")
 st.text("Para podermos entender como está a temperatura global, deve-se observar onde se concentra os maiores picos para que seja planejado a melhor estratégia de redução do aquecimento global seguindo obviamente a característica deste país.")
 st.text("Vamos olhar os dados detalhados:")
 st.dataframe(df_country_filtrado)
-st.text("Vamos ver a média de temperatura por país selecionado")
+st.text("Vamos ver a média de temperatura por país selecionado") 
 line_chart_country = alt.Chart(df_country_filtrado).mark_line(interpolate='basis').encode(
     alt.X("dt:T", title='Data'),
     alt.Y('AverageTemperature:Q', title='Temperatura'),
@@ -183,6 +163,8 @@ line_chart_country = alt.Chart(df_country_filtrado).mark_line(interpolate='basis
         )
 )
 st.altair_chart(line_chart_country) 
+st.write("Clique no botão abaixo para baixar os dados filtrados :arrow_down_small::")
+baixar_arquivo(df_state_filtrado,"temperatura_por_pais")
 st.markdown("---")
 # ------------------------------------------------
  
@@ -208,6 +190,7 @@ line_chart_state = alt.Chart(df_state_filtrado).mark_line(interpolate='basis').e
         )
 )
 st.altair_chart(line_chart_state)
+baixar_arquivo(df_state_filtrado,"temperatura_por_estado")
 st.markdown("---")
 # ------------------------------------------------
 
@@ -242,6 +225,7 @@ line_chart_global = alt.Chart(df_global_filtrado).transform_fold(
     )
 )
 st.altair_chart(line_chart_global)
+baixar_arquivo(df_global_filtrado,"temperatura_global")
 st.markdown("---")
 # ------------------------------------------------
 
@@ -249,3 +233,15 @@ st.subheader("Temperadura em São Paulo", text_alignment="center")
 st.text("São Paulo já foi considerada a terra da garoa. Em dias de frio eram tensos. O calor não castigava tanto. Hoje, por conta do aquecimento global, o cenário é outros.")
 st.text("Vejamos a seguir a métia de temperatura entre os anos de 1991-2020 conforme o Wikipedia")
 st.dataframe(df_clima)
+st.markdown("---")
+
+# ------------------------------------------------
+st.header("Continuação Das Observações", text_alignment="center")
+st.text("Você pode agregar outras fontes de informação para compara-las com as já exibidas anteriormente.")
+recebe_arquivo = st.file_uploader("Faça o upload de um arquivo csv", type=["csv"])
+if recebe_arquivo is not None:
+    df_upload = pd.read_csv(recebe_arquivo, dtype=str)
+    st.dataframe(df_upload)
+else:
+    st.info("Faça o upload de um arquivo CSV para visualizar os dados abaixo.")
+    
