@@ -1,12 +1,19 @@
 # Importa bibliotecas
 import streamlit as st
 from pathlib import Path
-from data import df_country, df_state, df_global, df_clima
+import sys
+import os
 import pandas as pd
 import altair as alt
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+from data.processed import df_country, df_state, df_global, df_clima
 
 # Configura o layout do streamlit
-st.set_page_config(layout= 'wide')
+st.set_page_config(layout= 'wide') 
+
+# Agora você importa diretamente a partir da pasta 'data'
+from data.processed import df_country, df_state, df_global, df_clima
+
 
 #=============================== FUNÇÕES
 # Cria lista
@@ -229,7 +236,7 @@ baixar_arquivo(df_global_filtrado,"temperatura_global")
 st.markdown("---")
 # ------------------------------------------------
 
-st.subheader("Temperadura em São Paulo", text_alignment="center")
+st.subheader("Temperatura em São Paulo", text_alignment="center")
 st.text("São Paulo já foi considerada a terra da garoa. Em dias de frio eram tensos. O calor não castigava tanto. Hoje, por conta do aquecimento global, o cenário é outros.")
 st.text("Vejamos a seguir a métia de temperatura entre os anos de 1991-2020 conforme o Wikipedia")
 st.dataframe(df_clima)
