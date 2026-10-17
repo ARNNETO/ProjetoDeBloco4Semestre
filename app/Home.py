@@ -5,22 +5,20 @@ import sys
 import os
 import pandas as pd
 import altair as alt
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-from data.processed import df_country, df_state, df_global, df_clima
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), ".")))
+from data.processed import carregar_dados
+
+df_country, df_state, df_global, df_clima = carregar_dados()
 
 # Configura o layout do streamlit
 st.set_page_config(layout= 'wide') 
-
-# Agora você importa diretamente a partir da pasta 'data'
-from data.processed import df_country, df_state, df_global, df_clima
-
 
 #=============================== FUNÇÕES
 # Cria lista
 @st.cache_data
 def lista_opcoes(dataframe_lista: pd.DataFrame,
                  coluna: str) -> list:
-    return sorted(dataframe_lista[coluna].unique().tolist())
+    return sorted(dataframe_lista[coluna].unique().tolist()) 
 # ------------------------------------------------
 # Adiciona coluna ano
 @st.cache_data
@@ -54,13 +52,31 @@ if 'cor_fonte' not in st.session_state:
     st.session_state.cor_fonte = '#000000'
 
 #=============================== CARGA DE IMAGEM
-# Diretório da imagem
-root_dir = Path(__file__).parent.parent
-st.title('Monitoramento da Temperatura Global :fire_extinguisher: :fire:',text_alignment="center")
+# Cria as colunas
 coltext1, coltext2, coltext3, coltext4 = st.columns((6,1,1,1))
-with coltext1:
-    st.image(root_dir/'util/images/aquecimento-global.jpg',caption='"Quanto mais demorarmos para reduzir as emissões, mais caro vai custar para mantermos o aumento da temperatura em 2ºC". - Rajendra Pachauri, presidente IPCC',width=300)
 
+# Diretório da imagem
+image_path = (
+    Path(__file__).resolve().parent
+    / "util"
+    / "images"
+    / "aquecimento-global.jpg"
+)
+
+with coltext1:
+    if image_path.is_file():
+        st.image(
+            str(image_path),
+            caption=(
+                '"Quanto mais demorarmos para reduzir as emissões, '
+                'mais caro vai custar para mantermos o aumento da '
+                'temperatura em 2ºC". '
+                '- Rajendra Pachauri, presidente IPCC'
+            ),
+            width=300,
+        )
+    else:
+        st.error(f"Imagem não encontrada em: {image_path}")
 # =============================== CONFIGURAÇÃO DA PÁGINA
 with coltext3:
     st.color_picker("Escolha a cor de fundo:", key="cor_fundo")
