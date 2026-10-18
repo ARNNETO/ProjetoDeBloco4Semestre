@@ -51,8 +51,6 @@ def carregar_dados():
     df_country = df_country[df_country["dt"] >= "2000-01-01"].reset_index(drop=True)
     df_country["dt"] = df_country["dt"].dt.date
 
-    def dataframe_country():
-        return df_country
     # ----------------------------------------------------
     df_state = pd.read_csv(
         file_path_state,

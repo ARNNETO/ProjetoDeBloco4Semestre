@@ -54,7 +54,6 @@ async def get_temperature_by_contry(country: str, date: Date):
         (df_country["Country"] == country) &
         (df_country["dt"] == date)
     ]
-
     if country_data.empty:
         raise HTTPException(
             status_code=404,
@@ -63,7 +62,6 @@ async def get_temperature_by_contry(country: str, date: Date):
                 f"{country} na data {date}"
             ),
         )
-
     return [
         {
             "country": row["Country"],
