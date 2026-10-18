@@ -1,6 +1,5 @@
-import requests
 import streamlit as st
-from bs4 import BeautifulSoup
+from data.processed import coletar_texto
 
 # Configura o layout do streamlit
 st.set_page_config(layout= 'wide') 
@@ -15,30 +14,12 @@ st.markdown("""
             """
 )            
 
-# Endereço da reportagem.
-URL = "https://www.drogaraia.com.br/blog/saude/longevidade/calor-intenso"
 
-@st.cache_data
-def coletar_texto(url):
-    resposta = requests.get(url, timeout=30)
-    resposta.raise_for_status()
-    soup = BeautifulSoup(resposta.content, "html.parser")
-
-    # 3. Seleciona a quarta div filha direta de blog-posting.
-    # Equivale ao XPath: //*[@id="blog-posting"]/div[4]
-    conteudo = soup.select_one("#blog-posting > div:nth-of-type(4)")
-
-    for elemento in conteudo.select("script, style"):
-        elemento.decompose()
-
-    texto = conteudo.get_text(separator="\n", strip=True)
-
-    return texto
 
 
 # 6. Exibe o conteúdo na nova página do Streamlit.
 st.title("Calor Intenso")
-st.markdown(f"Fonte: [Blog da Raia]({URL})")
+st.markdown(f"Fonte: [Blog da Raia](https://www.drogaraia.com.br/blog/saude/longevidade/calor-intenso)")
 
-texto_reportagem = coletar_texto(URL)
+texto_reportagem = coletar_texto()
 st.text(texto_reportagem)

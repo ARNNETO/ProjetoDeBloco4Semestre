@@ -50,6 +50,9 @@ def carregar_dados():
     df_country["dt"] = pd.to_datetime(df_country["dt"])
     df_country = df_country[df_country["dt"] >= "2000-01-01"].reset_index(drop=True)
     df_country["dt"] = df_country["dt"].dt.date
+
+    def dataframe_country():
+        return df_country
     # ----------------------------------------------------
     df_state = pd.read_csv(
         file_path_state,
@@ -102,7 +105,7 @@ def carregar_dados():
     )
 
     response.raise_for_status()
-    
+
     # Converte o HTML para um objeto BeautifulSoup
     soup = BeautifulSoup(response.text, "html.parser")
 
@@ -169,3 +172,26 @@ def carregar_dados():
         columns=cabecalhos
     )
     return df_country, df_state, df_global, df_clima
+
+# ----------------------------------------------------
+# Texto Blog Raia
+
+# Endereço da reportagem.
+URL = "https://www.drogaraia.com.br/blog/saude/longevidade/calor-intenso"
+
+@st.cache_data
+def coletar_texto():
+    resposta = requests.get(URL, timeout=30)
+    resposta.raise_for_status()
+    soup = BeautifulSoup(resposta.content, "html.parser")
+
+    # 3. Seleciona a quarta div filha direta de blog-posting.
+    # Equivale ao XPath: //*[@id="blog-posting"]/div[4]
+    conteudo = soup.select_one("#blog-posting > div:nth-of-type(4)")
+
+    for elemento in conteudo.select("script, style"):
+        elemento.decompose()
+
+    texto = conteudo.get_text(separator="\n", strip=True)
+
+    return texto
