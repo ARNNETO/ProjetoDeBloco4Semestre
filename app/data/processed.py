@@ -1,18 +1,35 @@
 # Importa bibliotecas
 import streamlit as st
 import pandas as pd
-from kaggle.api.kaggle_api_extended import KaggleApi
 from pathlib import Path
-from datetime import date
 import requests
-from bs4 import BeautifulSoup
+
+
+DATASET_DIR = Path(__file__).resolve().parent / "datasets"
+
+
+@st.cache_data(show_spinner=False)
+def carregar_temperaturas_pais():
+    df_country = pd.read_csv(
+        DATASET_DIR / "GlobalLandTemperaturesByCountry.csv",
+        dtype={
+            "AverageTemperature": float,
+            "AverageTemperatureUncertainty": float,
+            "Country": str
+        },
+        parse_dates=["dt"]
+    )
+    df_country["dt"] = pd.to_datetime(df_country["dt"])
+    df_country = df_country[df_country["dt"] >= "2000-01-01"].reset_index(drop=True)
+    df_country["dt"] = df_country["dt"].dt.date
+    return df_country
 
 
 @st.cache_data
 def carregar_dados():
-    root_dir = Path(__file__).resolve().parent.parent
+    from bs4 import BeautifulSoup
 
-    dataset_dir = root_dir / "data" / "datasets"
+    dataset_dir = DATASET_DIR
     dataset_dir.mkdir(parents=True, exist_ok=True)
 
     file_path_country = dataset_dir / "GlobalLandTemperaturesByCountry.csv"
@@ -27,6 +44,8 @@ def carregar_dados():
 
     # Autentica e baixa  CSV
     if not all(arquivo.is_file() for arquivo in arquivos):
+        from kaggle.api.kaggle_api_extended import KaggleApi
+
         api = KaggleApi()
         api.authenticate()
 
@@ -38,18 +57,7 @@ def carregar_dados():
 
     #=============================== DATAFRAMES
     # Cria e ajusta os dataframes
-    df_country = pd.read_csv(
-        file_path_country,
-        dtype={
-            "AverageTemperature": float,
-            "AverageTemperatureUncertainty": float,
-            "Country": str
-        },
-        parse_dates=["dt"]
-    )
-    df_country["dt"] = pd.to_datetime(df_country["dt"])
-    df_country = df_country[df_country["dt"] >= "2000-01-01"].reset_index(drop=True)
-    df_country["dt"] = df_country["dt"].dt.date
+    df_country = carregar_temperaturas_pais()
 
     # ----------------------------------------------------
     df_state = pd.read_csv(
@@ -179,6 +187,8 @@ URL = "https://www.drogaraia.com.br/blog/saude/longevidade/calor-intenso"
 
 @st.cache_data
 def coletar_texto():
+    from bs4 import BeautifulSoup
+
     resposta = requests.get(URL, timeout=30)
     resposta.raise_for_status()
     soup = BeautifulSoup(resposta.content, "html.parser")

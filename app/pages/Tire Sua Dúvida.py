@@ -1,22 +1,40 @@
+import os
+
+import requests
 import streamlit as st
-from pathlib import Path
-# import sys
-# import os
 
-# sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), ".")))
 st.title("Tire Sua Dúvida")
-st.markdown("""
-            Aqui é seu espaço para que você possa tirar suas dúvidas sobre o aquecimento global e as mudanças climáticas.
-            Sinta-se à vontade para enviar suas perguntas e você receberá respostas detalhadas e informativas.
-            """)
+st.write("Escreva o que você deseja saber sobre queimadas ou sobre o clima")
 
-image_path = (
-    Path(__file__).resolve().parent.parent
-    / "util"
-    / "images"
-    / "under_construction.png"
-)
 
-col1, col2, col3 = st.columns([1,1,1])
-with col2:
-    st.image(image_path)
+with st.form("resposta_local"):
+    texto = st.text_area("Texto para gerar resposta", max_chars=300, height=220)
+    enviar = st.form_submit_button("Gerar resposta")
+
+if enviar:
+    if not texto.strip():
+        st.warning("Digite ou cole um texto para gerar resposta.")
+        st.stop()
+
+    api = os.getenv("CLIMATE_API_URL", "http://127.0.0.1:8000").rstrip("/")
+    try:
+        with st.spinner("Gerando resposta..."):
+            resposta = requests.post(
+                f"{api}/processar_texto", json={"texto": texto}, timeout=(3, 100)
+            )
+    except requests.Timeout:
+        st.error("A API demorou para responder. Tente um trecho menor.")
+    except requests.RequestException:
+        st.error("Não foi possível conectar à API. Verifique se o FastAPI está em execução.")
+    else:
+        try:
+            dados = resposta.json()
+        except requests.exceptions.JSONDecodeError:
+            dados = {}
+
+        if resposta.ok and isinstance(dados, dict) and isinstance(dados.get("texto_processado"), str):
+            st.subheader("Resposta")
+            st.text(dados["texto_processado"])
+        else:
+            detalhe = dados.get("detail") if isinstance(dados, dict) else None
+            st.error(detalhe if isinstance(detalhe, str) else "A API retornou uma resposta inesperada.")

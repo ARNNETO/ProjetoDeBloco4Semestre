@@ -1,19 +1,19 @@
 from fastapi import APIRouter, HTTPException
-from ..data.processed import carregar_dados
+from ..data.processed import carregar_temperaturas_pais
 from datetime import date as Date
 import pandas as pd
 
 from app.models.climate_model import ClimateConsultation, ClimateDiaryEntry, ClimateDiaryResponse
+from app.models.text_model import ErroResposta
 
 climate_diary = []
-df_country, _, _, _ = carregar_dados()
 
 router = APIRouter()
 
 # ------------------------------------------------------------------------------
 @router.post(
         "/registro-nova-temperatura",
-        response_model=ClimateDiaryEntry,
+        response_model=ClimateDiaryResponse,
         status_code=201
 )
 async def create_climate_diary_entry(entry: ClimateDiaryEntry):
@@ -28,6 +28,7 @@ async def create_climate_diary_entry(entry: ClimateDiaryEntry):
 @router.get(
     "/consulta-diario-climatico",
     response_model=list[ClimateDiaryResponse],
+    responses={404: {"model": ErroResposta}},
 )
 async def get_climate_diary(date: Date | None = None):
     if date is None:
@@ -47,9 +48,18 @@ async def get_climate_diary(date: Date | None = None):
 # ------------------------------------------------------------------------------
 @router.get(
     "/consulta-temperatura-por-pais",
-    response_model=list[ClimateConsultation]
+    response_model=list[ClimateConsultation],
+    responses={404: {"model": ErroResposta}, 503: {"model": ErroResposta}},
 )
-async def get_temperature_by_contry(country: str, date: Date):
+def get_temperature_by_country(country: str, date: Date):
+    try:
+        df_country = carregar_temperaturas_pais()
+    except (OSError, ValueError) as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="A base local de temperaturas por país está indisponível ou inválida.",
+        ) from exc
+
     country_data = df_country[
         (df_country["Country"] == country) &
         (df_country["dt"] == date)

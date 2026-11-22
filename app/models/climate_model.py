@@ -3,7 +3,7 @@ from datetime import date as Date
 
 class ClimateDiaryEntry(BaseModel):
     date: Date = Field(description="Data da observação formato YYYY-MM-DD")
-    temperature: float = Field( description="Temperatura em Ceulsius")
+    temperature: float = Field(allow_inf_nan=False, description="Temperatura em Celsius")
     observations: str = Field( description="Observações adicionais do usuário")
 
 class ClimateDiaryResponse(ClimateDiaryEntry):
