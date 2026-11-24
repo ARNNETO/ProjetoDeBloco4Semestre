@@ -10,30 +10,48 @@ from app.models.llm_model import (
     EntradaLonga,
     ModeloIndisponivel,
     resumir_texto,
+    responder_conversa,
 )
-from app.models.text_model import ErroResposta, ProcessarTextoEntrada, ProcessarTextoResposta
+from app.models.text_model import (
+    ConversaEntrada,
+    ConversaResposta,
+    ErroResposta,
+    ProcessarTextoEntrada,
+    ProcessarTextoResposta,
+)
 
 router = APIRouter(tags=["Processamento de texto"])
 logger = logging.getLogger(__name__)
 
 
-@router.post(
-    "/processar_texto",
-    response_model=ProcessarTextoResposta,
-    responses={
-        500: {"model": ErroResposta, "description": "Falha no processamento"},
-        503: {"model": ErroResposta, "description": "Modelo local indisponível"},
-        504: {"model": ErroResposta, "description": "Tempo limite excedido"},
-    },
-)
+ERROS = {
+    500: {"model": ErroResposta, "description": "Falha no processamento"},
+    503: {"model": ErroResposta, "description": "Modelo local indisponível"},
+    504: {"model": ErroResposta, "description": "Tempo limite excedido"},
+}
+
+
+@router.post("/processar_texto", response_model=ProcessarTextoResposta, responses=ERROS)
 async def processar_texto(entrada: ProcessarTextoEntrada):
+    resumo = await executar_modelo(resumir_texto, entrada.texto)
+    return ProcessarTextoResposta(modelo=MODELO_ID, texto_processado=resumo)
+
+
+@router.post("/conversar", response_model=ConversaResposta, responses=ERROS)
+async def conversar(entrada: ConversaEntrada):
+    resposta = await executar_modelo(
+        responder_conversa, entrada.pergunta, entrada.contexto, entrada.historico
+    )
+    return ConversaResposta(modelo=MODELO_ID, resposta=resposta)
+
+
+async def executar_modelo(funcao, *dados):
     prazo = monotonic() + TEMPO_LIMITE
     try:
-        resumo = await asyncio.wait_for(
-            asyncio.to_thread(resumir_texto, entrada.texto, prazo),
+        return await asyncio.wait_for(
+            asyncio.to_thread(funcao, *dados, prazo),
             timeout=TEMPO_LIMITE,
         )
-        return ProcessarTextoResposta(modelo=MODELO_ID, texto_processado=resumo)
     except EntradaLonga as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except TimeoutError as exc:
@@ -49,5 +67,5 @@ async def processar_texto(entrada: ProcessarTextoEntrada):
     except Exception as exc:
         logger.exception("Falha ao processar texto.")
         raise HTTPException(
-            status_code=500, detail="Falha ao gerar o resumo. Consulte o log do servidor."
+            status_code=500, detail="Falha ao gerar a resposta. Consulte o log do servidor."
         ) from exc

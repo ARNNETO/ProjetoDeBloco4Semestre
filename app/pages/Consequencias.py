@@ -1,3 +1,4 @@
+import requests
 import streamlit as st
 from data.processed import coletar_texto
 
@@ -17,9 +18,11 @@ st.markdown("""
 
 
 
-# 6. Exibe o conteúdo na nova página do Streamlit.
+# Exibe o conteúdo na página do Streamlit.
 st.title("Calor Intenso")
 st.markdown(f"Fonte: [Blog da Raia](https://www.drogaraia.com.br/blog/saude/longevidade/calor-intenso)")
 
-texto_reportagem = coletar_texto()
-st.text(texto_reportagem)
+try:
+    st.text(coletar_texto())
+except (requests.RequestException, ValueError):
+    st.warning("Reportagem indisponível no momento.")

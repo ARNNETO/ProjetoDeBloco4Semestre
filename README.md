@@ -54,13 +54,13 @@ source .venv/bin/activate
 python -m streamlit run app/Home.py
 ```
 
-| HTTP | Quando ocorre |
-| --- | --- |
-| 200 | Resumo gerado e validado pelo modelo Pydantic. |
-| 422 | JSON inválido, campo `texto` ausente, vazio ou com mais de 6.000 caracteres, campos extras ou entrada acima de 2.048 tokens incluindo as instruções. |
-| 500 | Falha inesperada durante a geração. O servidor registra o diagnóstico. |
-| 503 | Pesos ou dependências indisponíveis, erro de carregamento, ou outra inferência em andamento. |
-| 504 | A solicitação excedeu 90 s, incluindo a primeira carga. A operação em CPU pode terminar o passo em curso depois de a API retornar. |
+| HTTP | Quando ocorre                                                                                                                                             |
+| ---- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 200  | Resumo gerado e validado pelo modelo Pydantic.                                                                                                            |
+| 422  | JSON inválido, campo `texto` ausente, vazio ou com mais de 6.000 caracteres, campos extras ou entrada acima de 2.048 tokens incluindo as instruções. |
+| 500  | Falha inesperada durante a geração. O servidor registra o diagnóstico.                                                                                 |
+| 503  | Pesos ou dependências indisponíveis, erro de carregamento, ou outra inferência em andamento.                                                           |
+| 504  | A solicitação excedeu 90 s, incluindo a primeira carga. A operação em CPU pode terminar o passo em curso depois de a API retornar.                    |
 
 Os erros retornam `{"detail":"mensagem"}`, e o Streamlit mostra a mensagem ao usuário. A cada solicitação, a geração produz até 160 novos tokens. A consulta climática usa o CSV local por país e retorna 503 se a base estiver indisponível ou inválida. O diário climático continua em memória.
 

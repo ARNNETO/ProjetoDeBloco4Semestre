@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
-from app.models.text_model import ErroResposta
+from app.models.text_model import MAX_CARACTERES, ErroResposta
 from app.routers.climate_router import router as climate_router
 from app.routers.text_router import router as text_router
 
@@ -21,7 +21,7 @@ async def tratar_entrada_invalida(request, exc):
     )
     mensagem = f"Entrada inválida. Confira os campos em /docs ({campos})."
     if request.url.path.rstrip("/") == "/processar_texto":
-        mensagem = "Envie JSON com o campo texto, contendo de 1 a 6000 caracteres."
+        mensagem = f"Envie JSON com o campo texto, contendo de 1 a {MAX_CARACTERES} caracteres."
     return JSONResponse(
         status_code=422, content=ErroResposta(detail=mensagem).model_dump()
     )

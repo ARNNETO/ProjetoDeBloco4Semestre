@@ -3,15 +3,20 @@ import streamlit as st
 from pathlib import Path
 import sys
 import os
+import requests
 import pandas as pd
 import altair as alt
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), ".")))
-from data.processed import carregar_dados
-
-df_country, df_state, df_global, df_clima = carregar_dados()
+from data.processed import carregar_dados, coletar_tabela_sp
 
 # Configura o layout do streamlit
-st.set_page_config(layout= 'wide') 
+st.set_page_config(layout="wide")
+
+try:
+    df_country, df_state, df_global = carregar_dados()
+except (OSError, ValueError, ImportError, RuntimeError, requests.RequestException):
+    st.error("Não foi possível carregar os CSVs. Confira a pasta de dados e o acesso ao Kaggle.")
+    st.stop() 
 
 #=============================== FUNÇÕES
 # Cria lista
@@ -187,7 +192,7 @@ line_chart_country = alt.Chart(df_country_filtrado).mark_line(interpolate='basis
 )
 st.altair_chart(line_chart_country) 
 st.write("Clique no botão abaixo para baixar os dados filtrados :arrow_down_small::")
-baixar_arquivo(df_state_filtrado,"temperatura_por_pais")
+baixar_arquivo(df_country_filtrado,"temperatura_por_pais")
 st.markdown("---")
 # ------------------------------------------------
  
@@ -255,7 +260,10 @@ st.markdown("---")
 st.subheader("Temperatura em São Paulo", text_alignment="center")
 st.text("São Paulo já foi considerada a terra da garoa. Em dias de frio eram tensos. O calor não castigava tanto. Hoje, por conta do aquecimento global, o cenário é outros.")
 st.text("Vejamos a seguir a métia de temperatura entre os anos de 1991-2020 conforme o Wikipedia")
-st.dataframe(df_clima)
+try:
+    st.dataframe(coletar_tabela_sp())
+except (requests.RequestException, ValueError):
+    st.warning("Tabela de São Paulo indisponível no momento.")
 st.markdown("---")
 
 # ------------------------------------------------

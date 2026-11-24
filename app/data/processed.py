@@ -8,6 +8,24 @@ import requests
 DATASET_DIR = Path(__file__).resolve().parent / "datasets"
 
 
+def garantir_csvs(*nomes):
+    dataset_dir = DATASET_DIR
+    dataset_dir.mkdir(parents=True, exist_ok=True)
+
+    # Autentica e baixa  CSV
+    if not all(arquivo.is_file() for arquivo in (dataset_dir / nome for nome in nomes)):
+        from kaggle.api.kaggle_api_extended import KaggleApi
+
+        api = KaggleApi()
+        api.authenticate()
+
+        api.dataset_download_files(
+            "sachinsarkar/climate-change-global-temperature-data",
+            path=str(dataset_dir),
+            unzip=True,
+        )
+
+
 @st.cache_data(show_spinner=False)
 def carregar_temperaturas_pais():
     df_country = pd.read_csv(
@@ -27,33 +45,9 @@ def carregar_temperaturas_pais():
 
 @st.cache_data
 def carregar_dados():
-    from bs4 import BeautifulSoup
-
-    dataset_dir = DATASET_DIR
-    dataset_dir.mkdir(parents=True, exist_ok=True)
-
-    file_path_country = dataset_dir / "GlobalLandTemperaturesByCountry.csv"
-    file_path_state = dataset_dir / "GlobalLandTemperaturesByState.csv"
-    file_path_temp = dataset_dir / "GlobalTemperatures.csv"
-
-    arquivos = [
-        file_path_country,
-        file_path_state,
-        file_path_temp,
-    ]
-
-    # Autentica e baixa  CSV
-    if not all(arquivo.is_file() for arquivo in arquivos):
-        from kaggle.api.kaggle_api_extended import KaggleApi
-
-        api = KaggleApi()
-        api.authenticate()
-
-        api.dataset_download_files(
-            "sachinsarkar/climate-change-global-temperature-data",
-            path=str(dataset_dir),
-            unzip=True,
-        )
+    file_path_state = DATASET_DIR / "GlobalLandTemperaturesByState.csv"
+    file_path_temp = DATASET_DIR / "GlobalTemperatures.csv"
+    garantir_csvs("GlobalLandTemperaturesByCountry.csv", file_path_state.name, file_path_temp.name)
 
     #=============================== DATAFRAMES
     # Cria e ajusta os dataframes
@@ -91,6 +85,13 @@ def carregar_dados():
     df_global["dt"] = pd.to_datetime(df_global["dt"])
     df_global = df_global[df_global["dt"] >= "2000-01-01"].reset_index(drop=True)
     df_global["dt"] = df_global["dt"].dt.date
+
+    return df_country, df_state, df_global
+
+
+@st.cache_data(ttl=3600)
+def coletar_tabela_sp():
+    from bs4 import BeautifulSoup
 
     #=============================== SCRAP
 
@@ -177,7 +178,7 @@ def carregar_dados():
         dados,
         columns=cabecalhos
     )
-    return df_country, df_state, df_global, df_clima
+    return df_clima
 
 # ----------------------------------------------------
 # Texto Blog Raia
@@ -185,7 +186,7 @@ def carregar_dados():
 # Endereço da reportagem.
 URL = "https://www.drogaraia.com.br/blog/saude/longevidade/calor-intenso"
 
-@st.cache_data
+@st.cache_data(ttl=3600)
 def coletar_texto():
     from bs4 import BeautifulSoup
 
@@ -196,6 +197,9 @@ def coletar_texto():
     # 3. Seleciona a quarta div filha direta de blog-posting.
     # Equivale ao XPath: //*[@id="blog-posting"]/div[4]
     conteudo = soup.select_one("#blog-posting > div:nth-of-type(4)")
+
+    if conteudo is None:
+        raise ValueError("O conteúdo da reportagem não foi localizado.")
 
     for elemento in conteudo.select("script, style"):
         elemento.decompose()
